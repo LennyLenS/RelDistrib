@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -32,55 +33,40 @@ std::string formatStr(std::string str) {
 int authorInsertion(int number) {
 
     FILE *f; 
-    f = fopen("authors.txt", "wb");
+    f = fopen("authors.bin", "wb");
 
     fwrite(&number, sizeof(int), 1, f);
     int count_columns = 2;
     fwrite(&count_columns, sizeof(int), 1, f);
 
-    std::string column1 = formatStr("id"); 
-    std::string column2 = formatStr("a_name");
-    std::string column1Type = formatStr("int");
-    std::string column2Type = formatStr("char(256)");
+    std::string column1 = formatStr(std::string("id")); 
+    std::string column2 = formatStr(std::string("a_name"));
+    std::string column1Type = formatStr(std::string("int"));
+    std::string column2Type = formatStr(std::string("char(256)"));
 
     fwrite(&column1, sizeof(column1), 1, f);
     fwrite(&column2, sizeof(column2), 1, f);
     fwrite(&column1Type, sizeof(column1Type), 1, f);
     fwrite(&column2Type, sizeof(column2Type), 1, f);
 
-    for (int i = 0; i < n; )
+    int id_seq = 0;
+    int n = AUTHOR_LIST.size();
+    for (int i = 0; i < number; i++) {
+        fwrite(&id_seq, sizeof(int), 1, f);
+        id_seq++;
 
-    with open(file_name, "w") as file:
-        file.write(str(number) + " 2\n")
-        file.write("id a_name\n")
-        file.write("int char(256)\n")
+        std::string name = formatStr(AUTHOR_LIST[rand() % n]);
+        fwrite(&name, sizeof(name), 1, f);
+    }
 
-        id_seq = 0
-        for _ in range(number):
-            name = generate_author()
-            id_seq += 1
-            
-            file.write(str(id_seq) + " " + name + "\n")
-        
-    print(f"Generate {number} records about the authors!")
+    fclose(f); 
+    std::cout << "Generate " << number << " records about the authors" << std::endl;
+    
+    return 0;
 }
 
-FILE *f; //описываем файловую переменную
-//создаем двоичный файл в режиме записи
-f=fopen(«D:\\game\\noobs.dat», «wb»);
-//ввод числа n
-cout<<«n=»; cin>>n;
-fwrite(&n, sizeof(int), 1, f);
-//цикл для ввода n вещественных чисел
-for (i=0; i<n; i++)
-{
-//ввод очередного вещественного числа
-cout<<«a=»;
-cin>>a;
-//запись вешественного числа в двоичный файл
-fwrite(&a, sizeof(double), 1, f);
+int main() {
+    authorInsertion(10);
+
+    return 0;
 }
-//закрываем файл
-fclose(f);
-system(«pause»);
-return 0;
