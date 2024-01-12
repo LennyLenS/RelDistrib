@@ -27,7 +27,7 @@ def generate_book():
     return (name, year, quantity)*/
 
 std::string formatStr(std::string str) {
-    return str + std::string(" ", 256 - str.size());
+    return str + std::string(255 - str.size(), ' ');
 }
 
 int authorInsertion(int number) {
@@ -39,24 +39,24 @@ int authorInsertion(int number) {
     int count_columns = 2;
     fwrite(&count_columns, sizeof(int), 1, f);
 
-    std::string column1 = formatStr(std::string("id")); 
+    std::string column1 = formatStr(std::string("id"));;
     std::string column2 = formatStr(std::string("a_name"));
     std::string column1Type = formatStr(std::string("int"));
     std::string column2Type = formatStr(std::string("char(256)"));
 
-    fwrite(&column1, sizeof(column1), 1, f);
-    fwrite(&column2, sizeof(column2), 1, f);
-    fwrite(&column1Type, sizeof(column1Type), 1, f);
-    fwrite(&column2Type, sizeof(column2Type), 1, f);
+    fwrite((char*) column1.c_str(), column1.length() + 1, 1, f);
+    fwrite((char*) column2.c_str(), column2.length() + 1, 1, f);
+    fwrite((char*) column1Type.c_str(), column1Type.length() + 1, 1, f);
+    fwrite((char*) column2Type.c_str(), column2Type.length() + 1, 1, f);
 
-    int id_seq = 0;
+    int id_seq = 1;
     int n = AUTHOR_LIST.size();
     for (int i = 0; i < number; i++) {
         fwrite(&id_seq, sizeof(int), 1, f);
         id_seq++;
 
         std::string name = formatStr(AUTHOR_LIST[rand() % n]);
-        fwrite(&name, sizeof(name), 1, f);
+        fwrite((char*) name.c_str(), name.length() + 1, 1, f);
     }
 
     fclose(f); 

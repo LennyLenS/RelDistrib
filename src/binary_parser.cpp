@@ -1,10 +1,21 @@
 #include "binary_parser.h"
-#include <iostream>
 
-using namespace std;
+std::string convertStr(std::string str) {
+    int pos = 0;
+    for (int j = 0; j < 256; j++) {
+        if (str[j] == ' ' && str[j + 1] == ' ') {
+            pos = j;
+            break;
+        }
+    }
 
-std::vector<struct data> parse_binary(std::string fileName){
-    std::vector<struct data> data;
+    str.erase(pos);
+    return str; 
+}
+
+struct data parse_binary(std::string fileName) {
+
+    struct data data;
     FILE *f; 
     f = fopen("authors.bin", "rb");
     // std::ifstream rf("student.dat", ios::out | ios::binary);
@@ -16,46 +27,89 @@ std::vector<struct data> parse_binary(std::string fileName){
     fread(&n, sizeof(int), 1, f);
     fread(&m, sizeof(int), 1, f);
     for(int i = 0; i < m; ++i){
-        string buf;
-        buf.resize(256);
-        fread(&buf, 256, 1, f);
-        data.fieldNames.push_back(buf);
+        char * buf = new char[256];        
+        fread(buf, 256, 1, f);
+        std::string bufString = buf;                       
+        delete[]buf;
+        data.fieldNames.push_back(bufString);
     }
 
-    std::vector<int> columnSizes;
+    std::vector<std::string> fieldTypes = {};
     for(int i = 0; i < m; ++i){
-        int buf = 0;
-        fread(&buf, sizeof(int), 1, f);
-        columnSizes.push_back(buf);
+        char * buf = new char[256];        
+        fread(buf, 256, 1, f);
+        std::string bufString = buf;                       
+        delete[]buf;
+        data.fieldTypes.push_back(bufString);
+        fieldTypes.push_back(convertStr(bufString));
     }
 
-    std::vector<int> columnType;
-    for(int i = 0; i < m; ++i){
-        string buf;
-        buf.resize(256);
-        fread(&buf, 256, 1, f);
-        columnType.push_back(buf);
-    }
 
     for(int i = 0; i < n; ++i){
-        data.push_back({});
+        data.tuples.push_back({});
         for(int j = 0; j < m; ++j){
-            if(columnType[i] == "int"){
+            if(fieldTypes[j] == "int"){
                 int buf = 0;
                 fread(&buf, sizeof(int), 1, f);
-                data[i].push_back(std::to_string(buf));
-            }else if(columnType[i] == "string"){
-                string buf;
-                buf.resize(256);
-                fread(&buf, 256, 1, f);
-                data[i].push_back(buf);
+                data.tuples[i].push_back(std::to_string(buf));
+            }else if(fieldTypes[j] == "char(256)"){
+                char * buf = new char[256];        
+                fread(buf, 256, 1, f);
+                std::string bufString = buf;                       
+                delete[]buf;
+                data.tuples[i].push_back(bufString);
             }else{
                 bool buf = true;
                 fread(&buf, sizeof(bool), 1, f);
-                data[i].push_back(std::to_string(buf));
+                data.tuples[i].push_back(std::to_string(buf));
             }
             
         }
     }
     return data;
+}
+
+
+int binary_txt(std::string fileName) {
+    auto data = parse_binary(fileName);
+
+    fileName.erase(fileName.length() - 4);
+    std::ofstream fOut;         
+    fOut.open(fileName + ".txt");   
+
+    int n = data.tuples.size(); 
+    int m = data.fieldNames.size();
+
+    fOut << n << " " << m << std::endl;
+
+    std::string str = "";
+    for (int i = 0; i < m; i++) {
+        str = convertStr(data.fieldNames[i]);
+        fOut << str << " ";
+    }
+    fOut << std::endl;
+
+    std::vector<std::string> fieldTypes = {};
+    for (int i = 0; i < m; i++) {
+        str = convertStr(data.fieldTypes[i]);
+        fieldTypes.push_back(str);
+
+        fOut << str << " ";
+    }
+    fOut << std::endl;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            str = data.tuples[i][j];
+            if (fieldTypes[j] == "char(256)") {
+                str = convertStr(str);
+            }
+
+            fOut << str << " ";
+        }
+        fOut << std::endl;
+    }
+    fOut << std::endl;
+
+    return 0;
 }

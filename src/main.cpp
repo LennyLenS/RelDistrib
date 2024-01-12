@@ -2,5 +2,7 @@
 
 int main(){
     std::string file = "authors.bin";
-    auto data = parse_binary(file);
+    binary_txt(file);
+    
+    return 0;
 }
