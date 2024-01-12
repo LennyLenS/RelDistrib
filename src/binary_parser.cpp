@@ -17,12 +17,8 @@ struct data parse_binary(std::string fileName) {
 
     struct data data;
     FILE *f; 
-    f = fopen("authors.bin", "rb");
-    // std::ifstream rf("student.dat", ios::out | ios::binary);
-    // if(!rf) {
-    //     cout << "Cannot open file!" << endl;
-    //     return {};
-    // }
+    f = fopen(fileName.c_str(), "rb");
+    
     int n = 0, m = 0;
     fread(&n, sizeof(int), 1, f);
     fread(&m, sizeof(int), 1, f);
@@ -66,6 +62,8 @@ struct data parse_binary(std::string fileName) {
             
         }
     }
+
+    fclose(f);
     return data;
 }
 
@@ -111,5 +109,6 @@ int binary_txt(std::string fileName) {
     }
     fOut << std::endl;
 
+    fOut.close();
     return 0;
 }
