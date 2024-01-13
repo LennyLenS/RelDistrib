@@ -13,18 +13,58 @@ std::string convertStr(std::string str) {
     return str; 
 }
 
-struct data parse_binary(std::string fileName) {
+struct fileInfo file_info(std::string fileName){
+    std::ifstream Fin;         
+    Fin.open(fileName, std::ios::binary);
+    struct fileInfo data;
+    Fin.read((char*)&(data.n), sizeof(int));
+    Fin.read((char*)&(data.m), sizeof(int));
+    for(int i = 0; i < data.m; ++i){
+        char * buf = new char[256];        
+        Fin.read(buf, 256);
+        std::string bufString = buf;                       
+        delete[]buf;
+        data.fieldNames.push_back(bufString);
+    }
 
+    for(int i = 0; i < data.m; ++i){
+        char * buf = new char[256];        
+        Fin.read(buf, 256);
+        std::string bufString = buf;                       
+        delete[]buf;
+        data.fieldTypes.push_back(convertStr(bufString));
+    }
+    Fin.close();
+    return data;
+}
+
+int get_turple_size(std::string fileName){
+    auto fileInfo = file_info(fileName);
+    int ans = 0;
+    for(auto type: fileInfo.fieldTypes){
+        if(type == "int"){
+            ans += (int)sizeof(int);
+        }else if(type == "bool"){
+            ans += (int)sizeof(bool);
+        }else{
+            ans += 256;
+        }
+    }
+    return ans;
+}
+
+struct data parse_binary(std::string fileName, int shift = 0, int quantity = 10) {
+    std::ifstream Fin;         
+    Fin.open(fileName, std::ios::binary);
     struct data data;
-    FILE *f; 
-    f = fopen(fileName.c_str(), "rb");
-    
+
     int n = 0, m = 0;
-    fread(&n, sizeof(int), 1, f);
-    fread(&m, sizeof(int), 1, f);
+    Fin.read((char*)&n, sizeof(int));
+    Fin.read((char*)&m, sizeof(int));
+
     for(int i = 0; i < m; ++i){
         char * buf = new char[256];        
-        fread(buf, 256, 1, f);
+        Fin.read(buf, 256);
         std::string bufString = buf;                       
         delete[]buf;
         data.fieldNames.push_back(bufString);
@@ -33,44 +73,43 @@ struct data parse_binary(std::string fileName) {
     std::vector<std::string> fieldTypes = {};
     for(int i = 0; i < m; ++i){
         char * buf = new char[256];        
-        fread(buf, 256, 1, f);
+        Fin.read(buf, 256);
         std::string bufString = buf;                       
         delete[]buf;
         data.fieldTypes.push_back(bufString);
         fieldTypes.push_back(convertStr(bufString));
     }
 
-
-    for(int i = 0; i < n; ++i){
+    Fin.seekg(Fin.tellg() + (long long)shift);
+    for(int i = 0; i < quantity; ++i){
         data.tuples.push_back({});
         for(int j = 0; j < m; ++j){
             if(fieldTypes[j] == "int"){
                 int buf = 0;
-                fread(&buf, sizeof(int), 1, f);
+                Fin.read((char*)&buf, sizeof(int));
                 data.tuples[i].push_back(std::to_string(buf));
             }else if(fieldTypes[j] == "char(256)"){
                 char * buf = new char[256];        
-                fread(buf, 256, 1, f);
+                Fin.read(buf, 256);
                 std::string bufString = buf;                       
                 delete[]buf;
                 data.tuples[i].push_back(bufString);
             }else{
                 bool buf = true;
-                fread(&buf, sizeof(bool), 1, f);
+                Fin.read((char *)&buf, sizeof(bool));
                 data.tuples[i].push_back(std::to_string(buf));
             }
-            
         }
     }
 
-    fclose(f);
+    Fin.close();
     return data;
 }
 
 
 int binary_txt(std::string fileName) {
-    auto data = parse_binary(fileName);
-
+    std::cout << fileName << ":\n";
+    auto data = parse_binary(fileName, get_turple_size(fileName) * 3);
     fileName.erase(fileName.length() - 4);
     std::ofstream fOut;         
     fOut.open(fileName + ".txt");   
