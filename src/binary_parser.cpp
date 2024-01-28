@@ -13,83 +13,122 @@ std::string convertStr(std::string str) {
     return str; 
 }
 
-struct data parse_binary(std::string fileName) {
+int getFileInfo(std::string fileName, struct data& data) {
+    std::ifstream Fin;      
+    Fin.open(fileName, std::ios::binary);
 
-    struct data data;
-    FILE *f; 
-    f = fopen(fileName.c_str(), "rb");
-    
-    int n = 0, m = 0;
-    fread(&n, sizeof(int), 1, f);
-    fread(&m, sizeof(int), 1, f);
-    for(int i = 0; i < m; ++i){
-        char * buf = new char[256];        
-        fread(buf, 256, 1, f);
+    delete data.info;
+    data.info = new struct fileInfo;
+
+    int n = 0;
+    int m = 0;
+
+    Fin.read((char*)&(n), sizeof(int));
+    Fin.read((char*)&(m), sizeof(int));
+    data.info->n = n;
+    data.info->m = m;
+
+    for (int i = 0; i < m; ++i) {
+        char* buf = new char[256];        
+        Fin.read(buf, 256);
         std::string bufString = buf;                       
-        delete[]buf;
-        data.fieldNames.push_back(bufString);
+        delete[] buf;
+        data.info->fieldNames.push_back(bufString);
     }
 
-    std::vector<std::string> fieldTypes = {};
-    for(int i = 0; i < m; ++i){
-        char * buf = new char[256];        
-        fread(buf, 256, 1, f);
+    data.info->tuple_size = 0;
+    for (int i = 0; i < m; ++i) {
+        char* buf = new char[256];        
+        Fin.read(buf, 256);
         std::string bufString = buf;                       
-        delete[]buf;
-        data.fieldTypes.push_back(bufString);
-        fieldTypes.push_back(convertStr(bufString));
-    }
+        delete[] buf;
+        std::string bufType = convertStr(bufString);
+        data.info->fieldTypes.push_back(bufType);
 
+        if (bufType == "int") {
+            data.info->tuple_size += sizeof(int);
 
-    for(int i = 0; i < n; ++i){
-        data.tuples.push_back({});
-        for(int j = 0; j < m; ++j){
-            if(fieldTypes[j] == "int"){
-                int buf = 0;
-                fread(&buf, sizeof(int), 1, f);
-                data.tuples[i].push_back(std::to_string(buf));
-            }else if(fieldTypes[j] == "char(256)"){
-                char * buf = new char[256];        
-                fread(buf, 256, 1, f);
-                std::string bufString = buf;                       
-                delete[]buf;
-                data.tuples[i].push_back(bufString);
-            }else{
-                bool buf = true;
-                fread(&buf, sizeof(bool), 1, f);
-                data.tuples[i].push_back(std::to_string(buf));
-            }
-            
+        } else if (bufType == "char(256)") {
+            data.info->tuple_size += 256;
+
+        } else {
+            data.info->tuple_size += sizeof(bool);
         }
     }
 
-    fclose(f);
-    return data;
+    Fin.close();
+    return 0;
+}
+
+int parseBinary(std::string fileName, struct data& data, int shift = 0, int quantity = -1) {
+    std::ifstream Fin;         
+    Fin.open(fileName, std::ios::binary);
+
+    if (!(data.info)) {
+        getFileInfo(fileName, data);
+    }
+
+    int buf = 2 * sizeof(int) + 2 * data.info->m * 256 + shift * data.info->tuple_size;
+    Fin.seekg(Fin.tellg() + (long) buf);
+
+    int n = data.info->n;
+    int m = data.info->m;
+
+    if (quantity == -1) {
+        quantity = n - shift;
+    }
+
+    for (int i = 0; i < quantity; ++i) {
+        data.tuples.push_back({});
+        for (int j = 0; j < m; ++j) {
+            if (data.info->fieldTypes[j] == "int") {
+                int buf = 0;
+                Fin.read((char*)&buf, sizeof(int));
+                data.tuples[i].push_back(std::to_string(buf));
+
+            } else if (data.info->fieldTypes[j] == "char(256)") {
+                char * buf = new char[256];        
+                Fin.read(buf, 256);
+                std::string bufString = buf;                       
+                delete[]buf;
+                data.tuples[i].push_back(bufString);
+
+            } else {
+                bool buf = true;
+                Fin.read((char *)&buf, sizeof(bool));
+                data.tuples[i].push_back(std::to_string(buf));
+            }
+        }
+    }
+
+    Fin.close();
+    return 0;
 }
 
 
-int binary_txt(std::string fileName) {
-    auto data = parse_binary(fileName);
+int binaryTxt(std::string fileName) {
 
+    struct data data;
+    parseBinary(fileName, data);
     fileName.erase(fileName.length() - 4);
     std::ofstream fOut;         
     fOut.open(fileName + ".txt");   
 
-    int n = data.tuples.size(); 
-    int m = data.fieldNames.size();
+    int n = data.info->n;
+    int m = data.info->m;
 
     fOut << n << " " << m << std::endl;
 
     std::string str = "";
     for (int i = 0; i < m; i++) {
-        str = convertStr(data.fieldNames[i]);
+        str = convertStr(data.info->fieldNames[i]);
         fOut << str << " ";
     }
     fOut << std::endl;
 
     std::vector<std::string> fieldTypes = {};
     for (int i = 0; i < m; i++) {
-        str = convertStr(data.fieldTypes[i]);
+        str = data.info->fieldTypes[i];
         fieldTypes.push_back(str);
 
         fOut << str << " ";

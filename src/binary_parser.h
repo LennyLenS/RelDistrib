@@ -3,11 +3,27 @@
 #include <string>
 #include <fstream>
 
-struct data{
+struct fileInfo {
     std::vector<std::string> fieldNames;
     std::vector<std::string> fieldTypes;
-    std::vector<std::vector<std::string>> tuples;
+    int n, m, tuple_size;
 };
 
-struct data parse_binary(std::string fileName);
-int binary_txt(std::string fileName);
+struct data {
+    struct fileInfo* info;
+    std::vector<std::vector<std::string>> tuples;
+
+    public:
+
+        data() {
+            this->info = nullptr;
+        }
+
+        ~data() {
+            delete this->info;
+        }
+};
+
+int getFileInfo(std::string fileName, struct data& data);
+int parseBinary(std::string fileName, struct data& data, int shift, int quantity);
+int binaryTxt(std::string fileName);
