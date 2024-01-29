@@ -1,6 +1,6 @@
 #include "binary_parser.h"
 
-int main(){
+int main() {
 
     binaryTxt("authors.bin");
     binaryTxt("books.bin");
