@@ -60,7 +60,7 @@ int getFileInfo(std::string fileName, struct data& data) {
     return 0;
 }
 
-int parseBinary(std::string fileName, struct data& data, int shift = 0, int quantity = -1) {
+int parseBinary(std::string fileName, struct data& data, int shift, int quantity) {
     std::ifstream Fin;         
     Fin.open(fileName, std::ios::binary);
 

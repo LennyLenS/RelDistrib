@@ -46,16 +46,16 @@ std::string formatStr(std::string str) {
     return str + std::string(255 - str.size(), ' ');
 }
 
-int authorInsertion(int number) {
+int authorInsertion(std::string fileName, int number) {
 
     FILE *f; 
-    f = fopen("authors.bin", "wb");
+    f = fopen(fileName.c_str(), "wb");
 
     fwrite(&number, sizeof(int), 1, f);
     int countColumns = 2;
     fwrite(&countColumns, sizeof(int), 1, f);
 
-    std::string column1 = formatStr(std::string("id"));;
+    std::string column1 = formatStr(std::string("id"));
     std::string column2 = formatStr(std::string("a_name"));
     std::string intType = formatStr(std::string("int"));
     std::string stringType = formatStr(std::string("char(256)"));
@@ -81,9 +81,9 @@ int authorInsertion(int number) {
     return 0;
 }
 
-int booksInsertion(int number) {
+int booksInsertion(std::string fileName, int number) {
     FILE *f; 
-    f = fopen("books.bin", "wb");
+    f = fopen(fileName.c_str(), "wb");
 
     fwrite(&number, sizeof(int), 1, f);
     int countColumns = 4;
@@ -126,15 +126,15 @@ int booksInsertion(int number) {
     return 0;
 }
 
-int insertionBooksAuthor() {
+int insertionBooksAuthor(std::string fileNameAuthor, std::string fileNameBook) {
 
     int authorsCount = 0, booksCount = 0;
     FILE *f; 
-    f = fopen("authors.bin", "rb");
+    f = fopen(fileNameAuthor.c_str(), "rb");
     fread(&authorsCount, sizeof(int), 1, f);
     fclose(f); 
 
-    f = fopen("books.bin", "rb");    
+    f = fopen(fileNameBook.c_str(), "rb");    
     fread(&booksCount, sizeof(int), 1, f);
     fclose(f); 
 
@@ -182,8 +182,9 @@ int insertionBooksAuthor() {
 }
 
 int main() {
-    authorInsertion(12);
-    booksInsertion(20);
-    insertionBooksAuthor();
+    authorInsertion("authors1.bin", 5);
+    authorInsertion("authors2.bin", 6);
+    //booksInsertion(20);
+    //insertionBooksAuthor();
     return 0;
 }
