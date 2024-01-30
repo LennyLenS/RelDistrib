@@ -2,17 +2,23 @@
 
 int main() {
     regOperations oper;
-    oper.regUnion("authors1.bin", "authors2.bin", "authorsResult.bin");
+    oper.regUnion("test_data/a1.bin", "test_data/a2.bin", "test_data/aRes.bin");
 
-    binaryTxt("authors1.bin");
-    binaryTxt("authors2.bin");
-    binaryTxt("authorsResult.bin");
+    binaryTxt("test_data/a.bin");
+    binaryTxt("test_data/a2.bin");
+    binaryTxt("test_data/aRes.bin");
 
     oper.setQuantityTreads(3);
-    oper.regIntersection("authorsResult.bin", "authors1.bin", "authorsResult2.bin");
-    oper.regIntersection("authorsResult.bin", "authors2.bin", "authorsResult3.bin");
-    binaryTxt("authorsResult2.bin");
-    binaryTxt("authorsResult3.bin");
+    oper.regIntersection("test_data/aRes.bin", "test_data/a1.bin", "test_data/aRes2.bin");
+    oper.regIntersection("test_data/aRes.bin", "test_data/a2.bin", "test_data/aRes3.bin");
+    binaryTxt("test_data/aRes2.bin");
+    binaryTxt("test_data/aRes3.bin");
+
+    oper.regDifference("test_data/aRes.bin", "test_data/a1.bin", "test_data/aRes4.bin");
+    oper.regDifference("test_data/aRes.bin", "test_data/a2.bin", "test_data/aRes5.bin");
+    binaryTxt("test_data/aRes4.bin");
+    binaryTxt("test_data/aRes5.bin");
+
 
     //binaryTxt("books.bin");
     //binaryTxt("books_authors.bin");

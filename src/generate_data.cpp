@@ -151,7 +151,7 @@ int insertionBooksAuthor(std::string fileNameAuthor, std::string fileNameBook) {
         ramdomDig.push_back(k);
     }
 
-    f = fopen("books_authors.bin", "wb");
+    f = fopen("test_data/books_authors.bin", "wb");
 
     fwrite(&count, sizeof(int), 1, f);
     int countColumns = 2;
@@ -182,8 +182,8 @@ int insertionBooksAuthor(std::string fileNameAuthor, std::string fileNameBook) {
 }
 
 int main() {
-    authorInsertion("authors1.bin", 5);
-    authorInsertion("authors2.bin", 6);
+    authorInsertion("test_data/a1.bin", 5);
+    authorInsertion("test_data/a2.bin", 6);
     //booksInsertion(20);
     //insertionBooksAuthor();
     return 0;
