@@ -2,12 +2,14 @@
 #include <string>
 #include <fstream>
 #include <stdlib.h>
+#include <thread>
 #include "binary_parser.h"
 
 bool fieldEquality(struct data& data1, struct data& data2);
 std::string formatStr(std::string str);
 int recordingFileInfo(struct data& data, int quantityTuples, FILE *f);
 int recordingData(struct data& data, FILE *f);
+void threadIntersection(std::string fileName1, struct data& data1, struct data& data2, int& quantityData, int shift, int quantity);
 
 class regOperations {
     private:
@@ -20,8 +22,8 @@ class regOperations {
         int setQuantityTreads(int value);
 
         int regUnion(std::string fileName1, std::string fileName2, std::string fileNameResult);
-        /*int regIntersection(std::string fileName1, std::string fileName2, std::string fileNameResult);
-        int regDifference(std::string fileName1, std::string fileName2, std::string fileNameResult);
+        int regIntersection(std::string fileName1, std::string fileName2, std::string fileNameResult);
+        /*int regDifference(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regCartesian(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regProjection(std::string fileName, std::string fileNameResult);
         int regLimitation(std::string fileName, std::string fileNameResult);
@@ -67,8 +69,8 @@ int recordingFileInfo(struct data& data, int quantityTuples, FILE *f) {
 }
 
 int recordingData(struct data& data, FILE *f) {
-    int n = data.info->n;
-    int m = data.info->m;
+    int n = data.tuples.size();
+    int m = data.tuples[0].size();
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
             std::string value = data.tuples[i][j];
@@ -112,37 +114,119 @@ int regOperations::regUnion(std::string fileName1, std::string fileName2, std::s
     }
 
     int n = data1.info->n + data2.info->n;
-    int quantityTreads = this->getQuantityTreads();
-    if (quantityTreads == 1 || n < 100000) {
-        parseBinary(fileName1, data1);
-        parseBinary(fileName2, data2);
+    
+    parseBinary(fileName1, data1);
+    parseBinary(fileName2, data2);
 
-        FILE *f; 
-        f = fopen(fileNameResult.c_str(), "wb");
-        recordingFileInfo(data1, n, f);
-        recordingData(data1, f);
+    FILE *f; 
+    f = fopen(fileNameResult.c_str(), "wb");
+    recordingFileInfo(data1, n, f);
+    recordingData(data1, f);
 
-        int indexId = -1;
-        int m = data2.info->m;
-        std::string strId = formatStr("id");
-        for (int i = 0; i < m; i++) {
-            if (strId == data2.info->fieldNames[i]) {
-                indexId = i;
+    int indexId = -1;
+    int m = data2.info->m;
+    std::string strId = formatStr("id");
+    for (int i = 0; i < m; i++) {
+        if (strId == data2.info->fieldNames[i]) {
+            indexId = i;
+            break;
+        }
+    }
+
+    if (indexId != -1) {
+        int n1 = data1.info->n;
+        int n2 = data2.info->n;
+        for (int i = 0; i < n2; i++) {
+            int value = n1 + i + 1;
+            data2.tuples[i][indexId] = std::to_string(value);
+        }
+    }
+    recordingData(data2, f);
+    fclose(f);
+    
+
+    return 0;
+}
+
+void threadIntersection(std::string fileName1, struct data& data1, struct data& data2, int& quantityData, int shift, int quantity) {
+    parseBinary(fileName1, data1, shift, quantity);
+
+    std::vector<std::vector<std::string>> bufTuples;
+    int n2 = data2.info->n;
+    int m2 = data2.info->m;
+
+    for (int i = 0; i < quantity; i++) {
+        for (int j = 0; j < n2; j++) {
+            if (data1.tuples[i] == data2.tuples[j]) {
+                bufTuples.push_back({});
+                for (int k = 0; k < m2; k++) {
+                    bufTuples[quantityData].push_back(data2.tuples[j][k]);
+                }
+                quantityData++;
                 break;
             }
-        }
 
-        if (indexId != -1) {
-            int n1 = data1.info->n;
-            int n2 = data2.info->n;
-            for (int i = 0; i < n2; i++) {
-                int value = n1 + i + 1;
-                data2.tuples[i][indexId] = std::to_string(value);
-            }
         }
-        recordingData(data2, f);
-        fclose(f);
     }
+    data1.tuples = bufTuples;
+}
+
+int regOperations::regIntersection(std::string fileName1, std::string fileName2, std::string fileNameResult) {
+    struct data data1;
+    getFileInfo(fileName1, data1);
+    struct data data2;
+    getFileInfo(fileName2, data2);
+
+    if (!fieldEquality(data1, data2)) {
+        return 1;
+    }
+
+    parseBinary(fileName2, data2);
+
+    int quantityTreads = this->getQuantityTreads();
+    int shift = data1.info->n / quantityTreads;
+    std::thread* threads = new std::thread[quantityTreads];
+
+    struct data* dataThreads = new struct data[quantityTreads];
+    int* quantityData = new int[quantityTreads];
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = data1.info;
+        quantityData[i] = 0;
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        int quantity = shift;
+        if (i == (quantityTreads - 1)) {
+            quantity = data1.info->n - shift * i;
+        }
+        threads[i] = std::thread(threadIntersection, fileName1, std::ref(dataThreads[i]), std::ref(data2), std::ref(quantityData[i]), shift * i, quantity);
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        threads[i].join();
+    }
+
+    int n = 0;
+    for (int i = 0; i < quantityTreads; i++) {
+        n += quantityData[i];
+    }
+
+    FILE *f; 
+    f = fopen(fileNameResult.c_str(), "wb");
+    recordingFileInfo(data1, n, f);    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        recordingData(dataThreads[i], f);
+    }    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = nullptr;
+    }
+
+    fclose(f);
+    delete[] threads;    
+    delete[] dataThreads;    
+    delete[] quantityData;    
 
     return 0;
 }

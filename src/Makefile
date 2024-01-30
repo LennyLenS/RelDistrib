@@ -2,7 +2,7 @@ CC = g++
 
 CFLAGS =  -c -Wall 
 
-LDFLAGS =
+LDFLAGS = -lgtest -pthread
 TESTLDFLAGS = -lgtest -lpthread
 
 SRCS =  binary_parser.cpp main.cpp 
