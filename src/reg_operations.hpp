@@ -9,7 +9,9 @@ bool fieldEquality(struct data& data1, struct data& data2);
 std::string formatStr(std::string str);
 int recordingFileInfo(struct data& data, int quantityTuples, FILE *f);
 int recordingData(struct data& data, FILE *f);
+
 void threadIntersection(std::string fileName1, struct data& data1, struct data& data2, int& quantityData, int shift, int quantity);
+void threadCartesian(std::string fileName1, struct data& data1, struct data& data2, int shift, int quantity);
 
 class regOperations {
     private:
@@ -24,8 +26,8 @@ class regOperations {
         int regUnion(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regIntersection(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regDifference(std::string fileName1, std::string fileName2, std::string fileNameResult);
-        /*int regCartesian(std::string fileName1, std::string fileName2, std::string fileNameResult);
-        int regProjection(std::string fileName, std::string fileNameResult);
+        int regCartesian(std::string fileName1, std::string fileName2, std::string fileNameResult);
+        /*int regProjection(std::string fileName, std::string fileNameResult);
         int regLimitation(std::string fileName, std::string fileNameResult);
         int regConnection(std::string fileName1, std::string fileName2, std::string fileNameResult);*/
 };
@@ -321,6 +323,90 @@ int regOperations::regDifference(std::string fileName1, std::string fileName2, s
     delete[] threads;    
     delete[] dataThreads;    
     delete[] quantityData;    
+
+    return 0;
+}
+
+void threadCartesian(std::string fileName1, struct data& data1, struct data& data2, int shift, int quantity) {
+    parseBinary(fileName1, data1, shift, quantity);
+
+    int n2 = data2.info->n;
+    int m1 = data2.info->m;
+    int m2 = data2.info->m;
+    int quantityTuples = 0;
+    std::vector<std::vector<std::string>> bufTuples;
+    for (int i = 0; i < quantity; i++) {
+        for (int j = 0; j < n2; j++) {
+            bufTuples.push_back({});
+            for (int k = 0; k < m1; k++) {
+                bufTuples[quantityTuples].push_back(data1.tuples[i][k]);
+            }
+            for (int k = 0; k < m2; k++) {
+                bufTuples[quantityTuples].push_back(data2.tuples[j][k]);
+            }
+            quantityTuples++;
+        }
+    }
+
+    data1.tuples = bufTuples;
+}
+
+int regOperations::regCartesian(std::string fileName1, std::string fileName2, std::string fileNameResult) {
+    struct data data1;
+    getFileInfo(fileName1, data1);
+    struct data data2;
+    getFileInfo(fileName2, data2);
+
+    parseBinary(fileName2, data2);
+
+    int quantityTreads = this->getQuantityTreads();
+    if (quantityTreads > 1 && (data1.info->n / quantityTreads) < 2) {
+        quantityTreads/= 2;
+    }
+
+    int shift = data1.info->n / quantityTreads;
+    std::thread* threads = new std::thread[quantityTreads];
+
+    struct data* dataThreads = new struct data[quantityTreads];
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = data1.info;
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        int quantity = shift;
+        if (i == (quantityTreads - 1)) {
+            quantity = data1.info->n - shift * i;
+        }
+        threads[i] = std::thread(threadCartesian, fileName1, std::ref(dataThreads[i]), std::ref(data2), shift * i, quantity);
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        threads[i].join();
+    }
+
+    int n = data1.info->n * data2.info->n;
+    data1.info->m = data1.info->m + data2.info->m;
+    int m2 = data2.info->m;
+    for (int i = 0; i < m2; i++) {
+        data1.info->fieldNames.push_back(data2.info->fieldNames[i]);
+        data1.info->fieldTypes.push_back(data2.info->fieldTypes[i]);
+    }
+
+    FILE *f; 
+    f = fopen(fileNameResult.c_str(), "wb");
+    recordingFileInfo(data1, n, f);    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        recordingData(dataThreads[i], f);
+    }    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = nullptr;
+    }
+
+    fclose(f);
+    delete[] threads;    
+    delete[] dataThreads;    
 
     return 0;
 }

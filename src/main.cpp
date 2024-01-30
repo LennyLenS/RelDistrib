@@ -19,6 +19,8 @@ int main() {
     binaryTxt("test_data/aRes4.bin");
     binaryTxt("test_data/aRes5.bin");
 
+    oper.regCartesian("test_data/a1.bin", "test_data/a2.bin", "test_data/aRes6.bin");
+    binaryTxt("test_data/aRes6.bin");
 
     //binaryTxt("books.bin");
     //binaryTxt("books_authors.bin");
