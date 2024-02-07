@@ -22,7 +22,10 @@ int main() {
     oper.regCartesian("test_data/a1.bin", "test_data/a2.bin", "test_data/aRes6.bin");
     binaryTxt("test_data/aRes6.bin");
 
-    //binaryTxt("books.bin");
+    binaryTxt("test_data/b1.bin");
+    oper.regProjection("test_data/b1.bin", "test_data/proj.txt", "test_data/aRes7.bin");
+    binaryTxt("test_data/aRes7.bin");
+
     //binaryTxt("books_authors.bin");
     return 0;
 }

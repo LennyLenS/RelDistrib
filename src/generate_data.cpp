@@ -184,6 +184,7 @@ int insertionBooksAuthor(std::string fileNameAuthor, std::string fileNameBook) {
 int main() {
     authorInsertion("test_data/a1.bin", 5);
     authorInsertion("test_data/a2.bin", 6);
+    booksInsertion("test_data/b1.bin", 20);
     //booksInsertion(20);
     //insertionBooksAuthor();
     return 0;

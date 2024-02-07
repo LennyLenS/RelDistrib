@@ -3,15 +3,18 @@
 #include <fstream>
 #include <stdlib.h>
 #include <thread>
+#include <set>
 #include "binary_parser.h"
 
 bool fieldEquality(struct data& data1, struct data& data2);
 std::string formatStr(std::string str);
 int recordingFileInfo(struct data& data, int quantityTuples, FILE *f);
 int recordingData(struct data& data, FILE *f);
+std::set<int> getProjection(std::vector<std::string> fieldNames, std::string fileNameProjection);
 
 void threadIntersection(std::string fileName1, struct data& data1, struct data& data2, int& quantityData, int shift, int quantity);
 void threadCartesian(std::string fileName1, struct data& data1, struct data& data2, int shift, int quantity);
+void threadProjection(std::string fileName, struct data& data, std::set<int> dataProjection, int shift, int quantity);
 
 class regOperations {
     private:
@@ -27,8 +30,8 @@ class regOperations {
         int regIntersection(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regDifference(std::string fileName1, std::string fileName2, std::string fileNameResult);
         int regCartesian(std::string fileName1, std::string fileName2, std::string fileNameResult);
-        /*int regProjection(std::string fileName, std::string fileNameResult);
-        int regLimitation(std::string fileName, std::string fileNameResult);
+        int regProjection(std::string fileName, std::string fileNameProjection, std::string fileNameResult);
+        /*int regLimitation(std::string fileName, std::string fileNameResult);
         int regConnection(std::string fileName1, std::string fileName2, std::string fileNameResult);*/
 };
 
@@ -395,6 +398,111 @@ int regOperations::regCartesian(std::string fileName1, std::string fileName2, st
     FILE *f; 
     f = fopen(fileNameResult.c_str(), "wb");
     recordingFileInfo(data1, n, f);    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        recordingData(dataThreads[i], f);
+    }    
+
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = nullptr;
+    }
+
+    fclose(f);
+    delete[] threads;    
+    delete[] dataThreads;    
+
+    return 0;
+}
+
+
+
+std::set<int> getProjection(std::vector<std::string> fieldNames, std::string fileNameProjection) {
+    std::fstream F;
+    F.open(fileNameProjection);
+
+    int m = fieldNames.size();
+    std::set<int> dataProjection = {};
+    while(!F.eof()) {
+        std::string name = "";
+        F >> name;
+        for (int i = 0; i < m; i++) {
+            if (name == convertStr(fieldNames[i])) {
+                dataProjection.insert(i);
+                break;
+            }
+        }
+    }
+    return dataProjection;
+}
+
+void threadProjection(std::string fileName, struct data& data, std::set<int> dataProjection, int shift, int quantity) {
+    parseBinary(fileName, data, shift, quantity);
+
+    std::vector<std::vector<std::string>> bufTuples;
+
+    for (int i = 0; i < quantity; i++) {
+        bufTuples.push_back({});
+        for (auto j : dataProjection) {
+            bufTuples[i].push_back(data.tuples[i][j]);
+        }
+    }
+    data.tuples = bufTuples;
+}
+
+int regOperations::regProjection(std::string fileName, std::string fileNameProjection, std::string fileNameResult) {
+    struct data data;
+    getFileInfo(fileName, data);
+
+    std::set<int> dataProjection = getProjection(data.info->fieldNames, fileNameProjection);
+    if (!dataProjection.size()) {
+        return -1;
+    }
+
+    int quantityTreads = this->getQuantityTreads();
+    if (quantityTreads > 1 && (data.info->n / quantityTreads) < 2) {
+        quantityTreads/= 2;
+    }
+
+    int shift = data.info->n / quantityTreads;
+    std::thread* threads = new std::thread[quantityTreads];
+
+    struct data* dataThreads = new struct data[quantityTreads];
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = data.info;
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        int quantity = shift;
+        if (i == (quantityTreads - 1)) {
+            quantity = data.info->n - shift * i;
+        }
+        threads[i] = std::thread(threadProjection, fileName, std::ref(dataThreads[i]), dataProjection, shift * i, quantity);
+    }
+
+    for (int i = 0; i < quantityTreads; i++) {
+        threads[i].join();
+    }
+
+    struct fileInfo* newFileInfo = new struct fileInfo;
+    newFileInfo->n = data.info->n;
+    newFileInfo->m = dataProjection.size();
+    newFileInfo->tuple_size = 0;
+    newFileInfo->fieldNames = {};
+    newFileInfo->fieldTypes = {};
+    for (auto i : dataProjection) {
+        newFileInfo->fieldNames.push_back(data.info->fieldNames[i]);
+        newFileInfo->fieldTypes.push_back(data.info->fieldTypes[i]);
+    }
+
+    delete data.info;
+    data.info = newFileInfo;
+    for (int i = 0; i < quantityTreads; i++) {
+        dataThreads[i].info = data.info;
+    }
+
+    FILE *f; 
+    f = fopen(fileNameResult.c_str(), "wb");
+    recordingFileInfo(data, data.info->n, f);    
 
     for (int i = 0; i < quantityTreads; i++) {
         recordingData(dataThreads[i], f);
